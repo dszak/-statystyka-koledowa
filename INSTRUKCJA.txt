@@ -1,0 +1,12 @@
+STATYSTYKA KOLĘDOWA — PWA NA IPHONE
+
+1. Na GitHubie utwórz publiczne repozytorium (np. koleda-app).
+2. Wgraj do niego zawartość tego folderu: index.html, sw.js, manifest.webmanifest, icon-192.png, icon-512.png.
+3. W repozytorium otwórz Settings > Pages, wybierz Deploy from a branch, branch main, folder / (root), zapisz.
+4. Poczekaj na publikację i otwórz adres GitHub Pages w Safari na iPhonie, gdy masz internet.
+5. W Safari: Udostępnij > Dodaj do ekranu początkowego > Dodaj.
+6. Uruchom aplikację z ikony i przetestuj tryb samolotowy (po pierwszym uruchomieniu online).
+7. Co jakiś czas: Trasy > Zapisz kopię, następnie zachowaj plik .json w Plikach / iCloud Drive.
+8. Aby odtworzyć: Trasy > Przywróć kopię i wybierz zapisany plik .json. UWAGA: przywrócenie zastępuje wszystkie bieżące trasy.
+
+WAŻNE: GitHub Pages udostępnia tylko KOD aplikacji, a nie Twoje wpisy. Wpisy są lokalne na iPhonie. Utrata danych Safari, usunięcie aplikacji lub awaria urządzenia może je usunąć. Plik kopii jest osobny i wymaga regularnego zapisu. Na publicznym GitHubie nie umieszczaj danych z rzeczywistych kartotek ani kopii .json. Ze względu na wrażliwy charakter danych rodzinnych najpierw testuj na danych fikcyjnych; przed realnym użyciem oceń wymogi ochrony danych.

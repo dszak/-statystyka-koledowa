@@ -1,0 +1,66 @@
+<!doctype html><html lang="pl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Statystyka kolędowa</title><meta name="theme-color" content="#194a72"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Kolęda"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icon-192.png"><style>body{font:18px system-ui;background:#eef3f8;color:#172b40;margin:0}header{background:#194a72;color:white;padding:20px}main{max-width:800px;margin:auto;padding:14px}.box{background:white;padding:18px;margin:14px 0;border-radius:14px}input,button{font:inherit;padding:12px;border-radius:9px;margin:5px 0}input{border:1px solid #b4c4d3;max-width:100%;box-sizing:border-box}button{border:0;background:#1767a8;color:white;cursor:pointer}.light{background:#e2ebf4;color:#163b59}.danger{background:#f9e5e5;color:#912929}.hide{display:none}table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #ddd;padding:9px;text-align:left}td:last-child,th:last-child{text-align:right}.line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #ddd;padding:8px 0}.line span{flex:1}small{color:#526679}#entry{width:100%;font-size:26px} .money{display:grid;grid-template-columns:75px 1fr 110px;align-items:center;gap:8px}.money input{width:100%}@media(max-width:520px){body{font-size:17px}header{padding:15px}main{padding:9px}.box{padding:14px;margin:10px 0}button{padding:12px 10px}.money{grid-template-columns:68px 1fr 92px}#entry{font-size:24px}}.backup-actions{display:flex;flex-wrap:wrap;gap:8px}.notice{background:#fff6d9;border-left:4px solid #d49b1d;padding:12px;border-radius:6px}</style>
+<header><b style="font-size:25px">Statystyka kolędowa</b><br><small style="color:#e0ecfa">Kartoteki i ofiary</small></header><main><section id="home"><div class="box"><h2>Nowa trasa</h2><label>Data kolędy<br><input type="date" id="date"></label><br><label>Ulica / ulice<br><input id="street" placeholder="np. Kościuszki"></label><br><label>Pierwsza klatka<br><input id="stair" placeholder="np. 42A"></label><br><button onclick="createRoute()">Dodaj trasę</button></div><div class="box"><h2>Kopia zapasowa</h2><p><small>Dane są zapisywane automatycznie na tym iPhonie. Regularnie zapisuj również kopię do Plików / iCloud Drive.</small></p><div class="backup-actions"><button onclick="exportBackup()">Zapisz kopię</button><button class="light" onclick="el('importFile').click()">Przywróć kopię</button></div><input id="importFile" class="hide" type="file" accept=".json,application/json" onchange="importBackup(event)"><p id="backupStatus" aria-live="polite"></p></div><div class="box"><h2>Trasy</h2><div id="routes"></div></div><small>Wersja offline: dane pozostają na tym urządzeniu, nie synchronizują się automatycznie. Kopię zapasową trzeba zapisać osobno. Do testów używaj danych fikcyjnych.</small></section>
+<section id="work" class="hide"><div class="box"><button class="light" onclick="home()">← Trasy</button> <button class="danger" onclick="removeRoute()">Usuń trasę</button><h2 id="title"></h2><p id="count"></p><button class="light" onclick="tab('cards')">Kartoteki</button> <button class="light" onclick="tab('summary')">Podsumowanie</button> <button class="light" onclick="tab('cash')">Ofiary</button></div>
+<div id="cards" class="box"><h2>Nowa kartoteka</h2><form onsubmit="addCard(event)"><input id="entry" placeholder="np. 5t czp r" autocomplete="off" autocapitalize="off"><button>Dodaj</button></form><p id="error" style="color:#b22"></p><small>5t — przyjęli; 4n — nie przyjęli; 0 — brak danych o osobach (nie przyjęli); czp, cbp, k, r; także 2r lub r r.</small><h3>Trzy ostatnie wpisy</h3><div id="last"></div><button class="light" onclick="undo()">Cofnij ostatni</button> <button class="light" onclick="toggleHistory()">Pokaż / ukryj historię</button><div id="history" class="hide"><h3>Wszystkie wpisy</h3><div id="all"></div></div></div>
+<div id="summary" class="box hide"><h2>Podsumowanie trasy</h2><table id="stats"></table></div><div id="cash" class="box hide"><h2>Rozliczenie ofiar</h2><p>Wpisz liczbę banknotów:</p><div id="money"></div><div id="cashout"></div><small>Podział bez rozmieniania: najbliższa możliwa kwota co najmniej 60% dla Ciebie. Monety dodamy w kolejnej wersji.</small></div></section></main>
+<script>
+const KEY='koleda-prototyp-1',denoms=[200,100,50,20,10];let routes=[],id=null;try{let stored=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(stored))routes=stored;else throw Error('Błędny zapis')}catch(e){alert('Nie udało się odczytać lokalnych danych. Nie zapisuj nowych danych przed przywróceniem kopii.')} 
+const el=x=>document.getElementById(x),save=()=>localStorage.setItem(KEY,JSON.stringify(routes)),r=()=>routes.find(x=>x.id===id),safe=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+el('date').value=new Date().toLocaleDateString('sv-SE');
+function home(){id=null;el('home').classList.remove('hide');el('work').classList.add('hide');el('routes').innerHTML=routes.length?routes.slice().reverse().map(x=>`<div class="line"><span><b>${safe(x.date)}</b><br>${safe(x.street)}, od ${safe(x.stair)}<br><small>${x.cards.length} kartotek</small></span><button onclick="openRoute('${x.id}')">Otwórz</button></div>`).join(''):'Brak tras.'}
+function createRoute(){let date=el('date').value,street=el('street').value.trim(),stair=el('stair').value.trim();if(!date||!street||!stair)return alert('Podaj datę, ulicę i klatkę.');let x={id:String(Date.now())+Math.random().toString(36).slice(2),date,street,stair,cards:[],money:{}};routes.push(x);save();openRoute(x.id)}
+function openRoute(x){id=x;el('home').classList.add('hide');el('work').classList.remove('hide');tab('cards');render()}
+function removeRoute(){if(confirm('Usunąć trasę i jej wpisy?')){routes=routes.filter(x=>x.id!==id);save();home()}}
+function tab(name){['cards','summary','cash'].forEach(x=>el(x).classList.toggle('hide',x!==name));render()}
+function parse(text){let s=text.trim().toLowerCase().replace(/\s+/g,' '),m=s.match(/^(\d+)\s*([tn])?(?:\s+(.*))?$/);if(!m||(!m[2]&&m[1]!=='0')||(m[1]==='0'&&m[2]==='t'))throw Error('Wpisz np. 5t albo 4n czp.');let persons=+m[1];if(!Number.isSafeInteger(persons)||persons>999)throw Error('Błędna liczba osób.');let cat={czp:0,cbp:0,k:0,r:0};if(m[3])for(let word of m[3].split(' ')){let a=word.match(/^(\d+)?(czp|cbp|k|r)$/);if(!a)throw Error('Nieznany skrót: '+word);cat[a[2]]+=a[1]?+a[1]:1}return {text:s,persons,yes:m[2]==='t',...cat}}
+function addCard(e){e.preventDefault();try{r().cards.push(parse(el('entry').value));save();el('entry').value='';el('error').textContent='';render();el('entry').focus()}catch(e){el('error').textContent=e.message}}
+function undo(){if(r().cards.length&&confirm('Cofnąć ostatni wpis?')){r().cards.pop();save();render()}}
+function toggleHistory(){el('history').classList.toggle('hide')}
+function edit(i){let x=prompt('Popraw kartotekę '+(i+1),r().cards[i].text);if(x===null)return;try{r().cards[i]=parse(x);save();render()}catch(e){alert(e.message)}}
+function del(i){if(confirm('Usunąć kartotekę '+(i+1)+'?')){r().cards.splice(i,1);save();render()}}
+function render(){if(!id)return;let x=r();el('title').textContent=`${x.date} · ${x.street} · ${x.stair}`;el('count').textContent=`Wprowadzono: ${x.cards.length} mieszkań`;
+let line=(v,i,actions=false)=>`<div class="line"><span>${i+1}. <b>${safe(v.text)}</b></span>${actions?`<button class="light" onclick="edit(${i})">Popraw</button><button class="danger" onclick="del(${i})">Usuń</button>`:''}</div>`;
+el('last').innerHTML=x.cards.slice(-3).map((v,i)=>line(v,x.cards.length-Math.min(3,x.cards.length)+i)).join('')||'Brak wpisów.';el('all').innerHTML=x.cards.map((v,i)=>line(v,i,true)).join('');
+let sum=k=>x.cards.reduce((a,v)=>a+(v[k]||0),0),yes=x.cards.filter(v=>v.yes).length;
+let values=[['Cywilny z przeszkodą',sum('czp')],['Cywilny bez przeszkody',sum('cbp')],['Rodziny rozbite',sum('r')],['Konkubinaty',sum('k')],['Wpuściło',yes],['Nie wpuściło',x.cards.length-yes],['Razem mieszkań',x.cards.length],['Liczba osób',sum('persons')]];
+el('stats').innerHTML=values.map(([a,b])=>`<tr><td>${a}</td><td><b>${b}</b></td></tr>`).join('');
+el('money').innerHTML=denoms.map(d=>`<div class="money"><b>${d} zł</b><input type="number" min="0" step="1" max="9999" value="${x.money[d]||0}" oninput="moneyChange(${d},this.value)"><span>${d*(x.money[d]||0)} zł</span></div>`).join('');cashResult()}
+function moneyChange(d,v){let n=Number(v);if(!Number.isInteger(n)||n<0||n>9999)return;r().money[d]=n;save();const row=event.target.closest(".money");if(row)row.querySelector("span").textContent=(d*n)+" zł";cashResult()}
+function cashResult(){let counts=denoms.map(d=>r().money[d]||0),total=denoms.reduce((s,d,i)=>s+d*counts[i],0);if(!total){el('cashout').innerHTML='<h3>Razem: 0 zł</h3>';return}let max=total/10;if(max>100000){el('cashout').textContent='Zbyt duża kwota do wyliczenia podziału.';return}
+let reach=new Uint8Array(max+1),prev=new Int32Array(max+1),which=new Int32Array(max+1),groups=[];reach[0]=1;
+denoms.forEach((d,i)=>{let left=counts[i],step=1;while(left){let n=Math.min(step,left);groups.push({value:n*d/10,denom:i,n});left-=n;step*=2}});
+groups.forEach((g,i)=>{for(let v=max;v>=g.value;v--)if(!reach[v]&&reach[v-g.value]){reach[v]=1;prev[v]=v-g.value;which[v]=i+1}});
+let goal=Math.ceil(total*.6/10-1e-10);while(!reach[goal])goal++;let mine=goal*10,me=[0,0,0,0,0],v=goal;while(v){let g=groups[which[v]-1];me[g.denom]+=g.n;v=prev[v]}
+el('cashout').innerHTML=`<h3>Razem: ${total} zł</h3><p>60% dokładnie: ${(total*.6).toFixed(2)} zł · 40%: ${(total*.4).toFixed(2)} zł</p><h3>Podział banknotów</h3><table><tr><th>Nominał</th><th>Dla Ciebie</th><th>Dla proboszcza</th></tr>${denoms.map((d,i)=>`<tr><td>${d} zł</td><td>${me[i]} szt.</td><td>${counts[i]-me[i]} szt.</td></tr>`).join('')}<tr><th>Razem</th><th>${mine} zł</th><th>${total-mine} zł</th></tr></table>`}
+function exportBackup(){
+ try{
+  const data={format:'statystyka-koledowa',version:1,createdAt:new Date().toISOString(),routes};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='koleda-kopia-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  el('backupStatus').textContent='Wybierz „Zapisz w Plikach” i zachowaj kopię w bezpiecznym miejscu.';
+ }catch(e){alert('Nie udało się utworzyć kopii: '+e.message)}
+}
+async function importBackup(ev){
+ const f=ev.target.files?.[0];if(!f)return;
+ try{
+  const data=JSON.parse(await f.text());
+  if(data.format!=='statystyka-koledowa'||data.version!==1||!Array.isArray(data.routes))throw Error('To nie jest prawidłowa kopia tej aplikacji.');
+  if(data.routes.length>10000)throw Error('Zbyt duży plik.');
+  for(const x of data.routes){
+   if(!x||typeof x.id!=='string'||typeof x.date!=='string'||typeof x.street!=='string'||typeof x.stair!=='string'||!Array.isArray(x.cards)||!x.money||typeof x.money!=='object')throw Error('Nieprawidłowe dane trasy.');
+   for(const c of x.cards){if(!c||typeof c.text!=='string')throw Error('Nieprawidłowa kartoteka.');const p=parse(c.text);if(['persons','yes','czp','cbp','k','r'].some(k=>p[k]!==c[k]))throw Error('Niespójne dane kartoteki.');}
+   for(const d of denoms){let n=x.money[d]??0;if(!Number.isInteger(n)||n<0||n>9999)throw Error('Nieprawidłowe nominały.');}
+  }
+  if(!confirm('Przywrócić '+data.routes.length+' tras? Obecne dane na tym urządzeniu zostaną ZASTĄPIONE danymi z kopii.'))return;
+  const old=routes;routes=data.routes;
+  try{save()}catch(e){routes=old;throw e}
+  home();el('backupStatus').textContent='Przywrócono '+routes.length+' tras.';
+ }catch(e){alert('Nie udało się przywrócić kopii: '+e.message)}finally{ev.target.value=''}
+}
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('Offline:',e)));
+}
+home();
+</script></html>
